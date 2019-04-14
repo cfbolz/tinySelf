@@ -12,6 +12,8 @@ class LiteralBox(BaseBox):
 
 
 class IntBox(LiteralBox):
+    _immutable_fields_ = ["value"]
+
     def __init__(self, value):
         assert isinstance(value, int)
 
@@ -23,6 +25,8 @@ class IntBox(LiteralBox):
 
 
 class FloatBox(LiteralBox):
+    _immutable_fields_ = ["value"]
+
     def __init__(self, value):
         assert isinstance(value, float)
 
@@ -34,6 +38,8 @@ class FloatBox(LiteralBox):
 
 
 class StrBox(LiteralBox):
+    _immutable_fields_ = ["value"]
+
     def __init__(self, value):
         assert isinstance(value, str)
 
@@ -45,6 +51,8 @@ class StrBox(LiteralBox):
 
 
 class ObjBox(LiteralBox):
+    _immutable_fields_ = ["value"]
+
     def __init__(self, obj):
         assert isinstance(obj, Object)
 
@@ -63,7 +71,7 @@ class ObjBox(LiteralBox):
 
 
 class CodeContext(object):
-    _immutable_fields_ = ["bytecodes"]
+    _immutable_fields_ = ["bytecodes", "literals[*]"]
 
     def __init__(self):
         self._finalized = False
@@ -73,14 +81,15 @@ class CodeContext(object):
 
         self.str_literal_cache = {}
 
-        self.literals = []
+        self.literals = None
+        self._mutable_literals = []
         self._params_cache = None  # used to cache intermediate parameters obj
 
     def add_literal(self, literal):
         assert isinstance(literal, LiteralBox)
 
-        self.literals.append(literal)
-        return len(self.literals) - 1
+        self._mutable_literals.append(literal)
+        return len(self._mutable_literals) - 1
 
     def add_literal_str(self, literal):
         index = self.str_literal_cache.get(literal, -1)
@@ -131,8 +140,9 @@ class CodeContext(object):
         self._mutable_bytecodes = None
         self.str_literal_cache = None
 
-        for item in self.literals:
+        for item in self._mutable_literals:
             item.finalize()
+        self.literals = self._mutable_literals[:] # make a copy to help rpython
 
         self._finalized = True
 
